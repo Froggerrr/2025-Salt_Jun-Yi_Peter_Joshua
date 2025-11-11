@@ -3,8 +3,6 @@ import tkinter as tk
 from tkinter import messagebox
 from datetime import datetime
 import random, math, os
-import sys
-import cv2
 
 SPRITE_PATH = "/mnt/data/90d47392-e48f-407f-9cce-a26714a986b3.png"
 
@@ -30,27 +28,19 @@ xp_needed = 100
 streak = 0
 last_streak_date = None
 
-# Question bank (static + dynamic circle questions will be generated)
-question_bank = [
-    {"question": "What is 2+2?", "answer": "4"},
-    {"question": "What is the capital of France?", "answer": "Paris"},
-    {"question": "Who wrote '1984'?", "answer": "George Orwell"},
-]
-
 questions_for_session = []
 current_question_index = 0
 num_questions = 0
 
 player_badges = []
 
-# Badge definitions and probabilities (must sum to ~=100)
+# Badge definitions with updated probabilities
 BADGES = [
-    {"key": "Triangle", "chance": 39.0},   # most common
-    {"key": "Circle",   "chance": 30.0},
-    {"key": "Square",   "chance": 30.0},
-    {"key": "Hexagon",  "chance": 1.0},    # rarest
+    {"key": "Triangle", "chance": 65.0},   # 65%
+    {"key": "Circle",   "chance": 30.0},   # 30%
+    {"key": "Square",   "chance": 4.9},    # 4.9%
+    {"key": "Hexagon",  "chance": 0.1},    # 0.1%
 ]
-# Adjusted to sum 100 in this setup. Feel free to tweak.
 
 def badge_random_choice():
     r = random.random() * 100
@@ -128,6 +118,150 @@ def draw_shape_on_canvas(canvas, shape_name, size=80, fill="#1e90ff", outline="b
         canvas.create_polygon(pts, fill=fill, outline=outline, width=2)
     else:
         canvas.create_text(cx, cy, text=shape_name, font=("Arial",10))
+
+# ---------------- Math Question Generators ----------------
+def generate_circle_question_and_answer():
+    # Use the exact logic you provided, but packaged into a function that returns (text, answer)
+    G=0; F=0; C=1
+    # use smaller ranges like you specified
+    while G**2 + F**2 - C <= 0:
+        G = random.randint(-20,20)
+        F = random.randint(-20,20)
+        C = random.randint(-50,50)
+    # create the nicely formatted equation string following your sign rules
+    def term_str(coef, var):
+        if coef == 0:
+            return ""
+        if var == "":
+            # constant
+            if coef > 0:
+                return f"+ {coef}"
+            else:
+                return f"- {-coef}"
+        if coef == 1:
+            return f"+ {var}"
+        if coef == -1:
+            return f"- {var}"
+        if coef > 0:
+            return f"+ {coef}{var}"
+        return f"- {-coef}{var}"
+    parts = ["x\u00b2 + y\u00b2"]
+    # Gx term
+    if G != 0:
+        if G > 0:
+            if G == 1: parts.append("+ x")
+            else: parts.append(f"+ {G}x")
+        else:
+            if G == -1: parts.append("- x")
+            else: parts.append(f"- {-G}x")
+    # Fy term
+    if F != 0:
+        if F > 0:
+            if F == 1: parts.append("+ y")
+            else: parts.append(f"+ {F}y")
+        else:
+            if F == -1: parts.append("- y")
+            else: parts.append(f"- {-F}y")
+    # C term (constant)
+    if C != 0:
+        if C > 0:
+            parts.append(f"+ {C}")
+        else:
+            parts.append(f"- {-C}")
+    # join and clean spacing
+    eq = " ".join(parts).replace("+ -", "- ").strip()
+    # final question text
+    question_text = f"A circle has an equation of {eq}. Find the coordinates of the center and the radius of the circle."
+    # compute center (h,k) and radius r
+    # standard: x^2 + y^2 + G x + F y + C = 0  => (x + G/2)^2 + (y + F/2)^2 = (G/2)^2 + (F/2)^2 - C
+    h = -G / 2.0
+    k = -F / 2.0
+    rad_sq = (G/2.0)**2 + (F/2.0)**2 - C
+    if rad_sq < 0:
+        r = 0.0
+    else:
+        r = math.sqrt(rad_sq)
+    # answer string: we'll store as tuple values but produce a simple string for comparison
+    # round to 3 decimal places for display and checking
+    answer_str = f"{round(h,3)},{round(k,3)},{round(r,3)}"
+    return question_text, answer_str
+
+def generate_circle_diameter_question():
+    x = 0
+    y = 0
+    m = 0
+    c = 0
+
+    while m*x + c == y:
+        x = random.randint(-20, 20)
+        y = random.randint(-20, 20)
+        m = random.randint(-10, 10)
+        c = random.randint(-10, 10)
+
+    if m != 0:
+        if m == 1:
+            if c > 0:
+                equation = f"y = x + {c}"
+            elif c == 0:
+                equation = f"y = x"
+            else:
+                equation = f"y = x - {-c}"
+        else:
+            if c > 0:
+                equation = f"y = {m}x + {c}"
+            elif c == 0:
+                equation = f"y = {m}x"
+            else:
+                equation = f"y = {m}x - {-c}"
+    else:
+        equation = f"y = {c}"
+
+    question = f"({x},{y}) is a point on a circle C. The equation of the diameter of the circle is {equation}. Find the equation of the circle in standard form."
+    
+    # Calculate the answer
+    # The center is the intersection of the diameter and its perpendicular through (x,y)
+    if m != 0:
+        # Perpendicular slope
+        m_perp = -1/m
+        # Center lies on both lines: y = mx + c and y - y1 = m_perp(x - x1)
+        # Solve: mx + c = m_perp(x - x1) + y1
+        center_x = (m_perp * x - y + c) / (m_perp - m)
+        center_y = m * center_x + c
+    else:
+        # Horizontal diameter, center has same y-coordinate as the point
+        center_x = x
+        center_y = c
+    
+    radius = math.sqrt((x - center_x)**2 + (y - center_y)**2)
+    
+    # Format answer as (x-h)^2 + (y-k)^2 = r^2
+    h = round(center_x, 2)
+    k = round(center_y, 2)
+    r_squared = round(radius**2, 2)
+    
+    answer = f"(x-{h})^2 + (y-{k})^2 = {r_squared}"
+    return question, answer
+
+def generate_line_inclination_question():
+    q = random.randint(-10, 9)
+    w = random.randint(-10, 10)
+    e = random.randint(q + 1, 10)
+    r = random.randint(-10, 10)
+    
+    if w == r:
+        r = r + 1
+    if r == 11:
+        r = random.randint(-10, 9)
+    
+    question = f"A line passes through the points ({q}, {w}) and ({e}, {r}). Find the angle of inclination for this line to 2 decimal places."
+    
+    # Calculate the angle
+    o = math.atan((r - w) / (e - q)) * 180 / math.pi
+    if o < 0:
+        o = 180 + o
+    
+    answer = str(round(o, 2))
+    return question, answer
 
 # ---------------- UI: Home Frame ----------------
 home_frame = tk.Frame(root, bg="#f0f8ff")
@@ -285,85 +419,26 @@ def start_questions_session():
     elif minutes <= 20: num_questions = 2
     elif minutes <= 30: num_questions = 3
     else: num_questions = 4
-    # generate dynamic circle questions combined with static bank
+    
+    # Generate questions - random mix of all three types
     questions_for_session = []
-    # add dynamic circle questions first
     for _ in range(num_questions):
-        q_text, q_answer = generate_circle_question_and_answer()
+        # Randomly choose between the three question types
+        question_type = random.choice(["circle_eq", "circle_diameter", "line_inclination"])
+        if question_type == "circle_eq":
+            q_text, q_answer = generate_circle_question_and_answer()
+        elif question_type == "circle_diameter":
+            q_text, q_answer = generate_circle_diameter_question()
+        else:  # line_inclination
+            q_text, q_answer = generate_line_inclination_question()
         questions_for_session.append({"question": q_text, "answer": q_answer})
+    
     current_question_index = 0
     hide_all_frames(); questions_frame.pack(fill="both", expand=True)
     show_next_question()
 
 take_test_button = tk.Button(stopwatch_frame, text="Take Test and Claim XP", font=("Arial",14,"bold"), bg="#1e90ff", fg="white", width=28, command=start_questions_session)
 take_test_button.pack(pady=14)
-
-# ---------------- Question Generator (your requested logic) ----------------
-def generate_circle_question_and_answer():
-    # Use the exact logic you provided, but packaged into a function that returns (text, answer)
-    G=0; F=0; C=1
-    # use smaller ranges like you specified
-    while G**2 + F**2 - C <= 0:
-        G = random.randint(-20,20)
-        F = random.randint(-20,20)
-        C = random.randint(-50,50)
-    # create the nicely formatted equation string following your sign rules
-    def term_str(coef, var):
-        if coef == 0:
-            return ""
-        if var == "":
-            # constant
-            if coef > 0:
-                return f"+ {coef}"
-            else:
-                return f"- {-coef}"
-        if coef == 1:
-            return f"+ {var}"
-        if coef == -1:
-            return f"- {var}"
-        if coef > 0:
-            return f"+ {coef}{var}"
-        return f"- {-coef}{var}"
-    parts = ["x\u00b2 + y\u00b2"]
-    # Gx term
-    if G != 0:
-        if G > 0:
-            if G == 1: parts.append("+ x")
-            else: parts.append(f"+ {G}x")
-        else:
-            if G == -1: parts.append("- x")
-            else: parts.append(f"- {-G}x")
-    # Fy term
-    if F != 0:
-        if F > 0:
-            if F == 1: parts.append("+ y")
-            else: parts.append(f"+ {F}y")
-        else:
-            if F == -1: parts.append("- y")
-            else: parts.append(f"- {-F}y")
-    # C term (constant)
-    if C != 0:
-        if C > 0:
-            parts.append(f"+ {C}")
-        else:
-            parts.append(f"- {-C}")
-    # join and clean spacing
-    eq = " ".join(parts).replace("+ -", "- ").strip()
-    # final question text
-    question_text = f"A circle has an equation of {eq}. Find the coordinates of the center and the radius of the circle."
-    # compute center (h,k) and radius r
-    # standard: x^2 + y^2 + G x + F y + C = 0  => (x + G/2)^2 + (y + F/2)^2 = (G/2)^2 + (F/2)^2 - C
-    h = -G / 2.0
-    k = -F / 2.0
-    rad_sq = (G/2.0)**2 + (F/2.0)**2 - C
-    if rad_sq < 0:
-        r = 0.0
-    else:
-        r = math.sqrt(rad_sq)
-    # answer string: we'll store as tuple values but produce a simple string for comparison
-    # round to 3 decimal places for display and checking
-    answer_str = f"{round(h,3)},{round(k,3)},{round(r,3)}"
-    return question_text, answer_str
 
 # ---------------- Questions UI ----------------
 questions_frame = tk.Frame(root, bg="#f0f8ff")
@@ -380,31 +455,41 @@ def submit_answer():
         return
     user = answer_entry.get().strip()
     correct = questions_for_session[current_question_index]["answer"]
-    # Accept a few formats: 'h,k,r' or 'h k r' or "h, k, r"
-    def parse_nums(s):
-        for sep in (",", " "):
-            parts = [p.strip() for p in s.split(sep) if p.strip()!=""]
-            if len(parts)==3:
-                try:
-                    nums = [float(p) for p in parts]
-                    return nums
-                except:
-                    continue
-        return None
-    usr_nums = parse_nums(user)
-    cor_nums = parse_nums(correct)
-    ok = False
-    if usr_nums and cor_nums:
-        # compare with tolerance
-        ok = all(abs(usr_nums[i]-cor_nums[i]) <= 0.2 for i in range(3))
+    
+    # Check if this is a circle center/radius question (format: h,k,r)
+    if "," in correct and len(correct.split(",")) == 3:
+        # Accept a few formats: 'h,k,r' or 'h k r' or "h, k, r"
+        def parse_nums(s):
+            for sep in (",", " "):
+                parts = [p.strip() for p in s.split(sep) if p.strip()!=""]
+                if len(parts)==3:
+                    try:
+                        nums = [float(p) for p in parts]
+                        return nums
+                    except:
+                        continue
+            return None
+        usr_nums = parse_nums(user)
+        cor_nums = parse_nums(correct)
+        ok = False
+        if usr_nums and cor_nums:
+            # compare with tolerance
+            ok = all(abs(usr_nums[i]-cor_nums[i]) <= 0.2 for i in range(3))
     else:
-        # fallback: compare lowercase strings
-        ok = user.lower() == correct.lower()
+        # For other question types, do direct comparison with tolerance for floats
+        try:
+            user_float = float(user)
+            correct_float = float(correct)
+            ok = abs(user_float - correct_float) <= 0.01
+        except:
+            # fallback: compare strings
+            ok = user.lower() == correct.lower()
+    
     if ok:
         feedback_label.config(text="✅ Correct! XP multiplier +0.1", fg="green")
         xp_multiplier += 0.1
     else:
-        feedback_label.config(text=f"❌ Incorrect. Correct (h,k,r) ≈ {correct}", fg="red")
+        feedback_label.config(text=f"❌ Incorrect. Correct answer: {correct}", fg="red")
     current_question_index += 1
     root.after(900, show_next_question)
 
@@ -454,14 +539,19 @@ loot_canvas_w, loot_canvas_h = 760, 220
 loot_canvas = tk.Canvas(shop_frame, width=loot_canvas_w, height=loot_canvas_h, bg="#ffffff", highlightthickness=1); loot_canvas.pack(pady=12)
 loot_result = tk.Label(shop_frame, text="", font=("Arial",14), bg="#f0f8ff"); loot_result.pack(pady=6)
 
-def make_marquee_items(n_repeat=8):
-    seq=[]; palette={"Triangle":"#ff6b6b","Circle":"#1e90ff","Square":"#4cd137","Hexagon":"#f7c948"}
-    base_order = ["Triangle","Circle","Square","Hexagon"]
-    for i in range(n_repeat):
-        for name in base_order: seq.append({"name":name,"color":palette[name]})
+# Fixed marquee generation - always use the same predictable order
+def make_marquee_items():
+    # Use fixed order: Triangle, Circle, Square, Hexagon repeated
+    palette = {"Triangle":"#ff6b6b","Circle":"#1e90ff","Square":"#4cd137","Hexagon":"#f7c948"}
+    fixed_order = ["Triangle", "Circle", "Square", "Hexagon"]
+    seq = []
+    # Repeat the fixed order multiple times to create a long enough sequence
+    for _ in range(8):
+        for name in fixed_order:
+            seq.append({"name": name, "color": palette[name]})
     return seq
 
-marquee_seq = make_marquee_items(6)
+marquee_seq = make_marquee_items()
 
 def buy_lootbox_and_award():
     global total_points
@@ -469,58 +559,143 @@ def buy_lootbox_and_award():
     if total_points < cost:
         messagebox.showwarning("Not enough points", "You do not have enough points to open a loot box.")
         return
-    img1=cv2.imread("image.png", cv2.IMREAD_ANYCOLOR)
-    cv2
-    total_points -= cost; update_home_labels(); loot_result.config(text="") 
+    total_points -= cost
+    update_home_labels()
+    loot_result.config(text="")
+    
+    # Determine the awarded badge first
     awarded = badge_random_choice()
-    seq = marquee_seq; frames = 50
-    def animate_frame(i, offset):
+    
+    # Find the FIRST occurrence of the awarded badge in the marquee sequence
+    target_index = -1
+    for i, item in enumerate(marquee_seq):
+        if item["name"] == awarded:
+            target_index = i
+            break
+    
+    if target_index == -1:
+        # Fallback - shouldn't happen with our fixed sequence
+        target_index = 0
+    
+    # Calculate the target offset to land the awarded badge in the center
+    spacing = 160
+    target_offset = target_index * spacing
+    
+    seq = marquee_seq
+    frames = 100  # More frames for smoother animation
+    
+    # Use instance variables to track animation state
+    animation_data = {"i": 0, "offset": 0, "current_speed": 20}
+    
+    def animate_frame():
+        i = animation_data["i"]
+        offset = animation_data["offset"]
+        current_speed = animation_data["current_speed"]
+        
         loot_canvas.delete("all")
-        spacing = 160; x = -offset
-        for item in seq:
-            box_x= x; box_y=40; cx=box_x+80; cy=box_y+60
+        x = -offset
+        
+        # Draw all items in the sequence
+        for j, item in enumerate(seq):
+            box_x = x
+            box_y = 40
+            cx = box_x + 80
+            cy = box_y + 60
+            
+            # Draw the box
             loot_canvas.create_rectangle(box_x+10, box_y+10, box_x+150, box_y+150, fill="#fff", outline="#eee")
+            
+            # Draw the shape
             if use_sprite_images and item["name"] in sprite_imgs:
                 img = sprite_imgs[item["name"]]
                 loot_canvas.create_image(box_x+20, box_y+10, anchor="nw", image=img)
             else:
-                if item["name"]=="Circle": loot_canvas.create_oval(cx-30,cy-30,cx+30,cy+30, fill=item["color"], outline="black")
-                elif item["name"]=="Square": loot_canvas.create_rectangle(cx-30,cy-30,cx+30,cy+30, fill=item["color"], outline="black")
-                elif item["name"]=="Triangle": loot_canvas.create_polygon(cx,cy-32, cx-30,cy+22, cx+30,cy+22, fill=item["color"], outline="black")
+                if item["name"]=="Circle": 
+                    loot_canvas.create_oval(cx-30,cy-30,cx+30,cy+30, fill=item["color"], outline="black")
+                elif item["name"]=="Square": 
+                    loot_canvas.create_rectangle(cx-30,cy-30,cx+30,cy+30, fill=item["color"], outline="black")
+                elif item["name"]=="Triangle": 
+                    loot_canvas.create_polygon(cx,cy-32, cx-30,cy+22, cx+30,cy+22, fill=item["color"], outline="black")
                 elif item["name"]=="Hexagon":
-                    r=28; pts=[]
+                    r=28
+                    pts=[]
                     for t in range(6):
                         ang = math.radians(60*t - 30)
                         pts.extend([cx + r*math.cos(ang), cy + r*math.sin(ang)])
                     loot_canvas.create_polygon(pts, fill=item["color"], outline="black")
+            
+            # Draw label and probability
             loot_canvas.create_text(box_x+80, box_y+165, text=item["name"], font=("Arial",10))
             chance = next((b["chance"] for b in BADGES if b["key"]==item["name"]),0.0)
             loot_canvas.create_text(box_x+80, box_y+185, text=f"{chance:.1f}%", font=("Arial",9))
             x += spacing
+        
+        # Highlight box in center
         loot_canvas.create_rectangle(loot_canvas_w//2 - 80, 25, loot_canvas_w//2 + 80, loot_canvas_h - 25, outline="#ff8c00", width=3)
+        
         if i < frames:
-            speed = max(2, 14 - int(i * (12/frames)))
-            root.after(40, lambda: animate_frame(i+1, offset + speed))
-        else:
-            # show awarded
-            loot_canvas.delete("all")
-            cx = loot_canvas_w//2; cy = loot_canvas_h//2 - 10
-            if use_sprite_images and awarded in sprite_imgs:
-                loot_canvas.create_image(cx - sprite_imgs[awarded].width()//2, cy - sprite_imgs[awarded].height()//2, anchor="nw", image=sprite_imgs[awarded])
+            # Calculate distance to target
+            distance_to_target = abs(target_offset - offset)
+            
+            # Smart deceleration
+            if distance_to_target < spacing * 0.8:
+                # Slow down significantly when close to target
+                new_speed = max(1, current_speed * 0.6)
+            elif distance_to_target < spacing * 2:
+                # Moderate deceleration
+                new_speed = max(2, current_speed * 0.85)
             else:
-                if awarded == "Circle": loot_canvas.create_oval(cx-90,cy-90,cx+90,cy+90, fill="#1e90ff", outline="black", width=3)
-                elif awarded == "Square": loot_canvas.create_rectangle(cx-90,cy-90,cx+90,cy+90, fill="#4cd137", outline="black", width=3)
-                elif awarded == "Triangle": loot_canvas.create_polygon(cx,cy-100, cx-95,cy+60, cx+95,cy+60, fill="#ff6b6b", outline="black", width=3)
+                # Gradual deceleration
+                new_speed = max(3, current_speed * 0.95)
+            
+            # Ensure we land exactly on target
+            if offset + new_speed >= target_offset:
+                new_offset = target_offset
+            else:
+                new_offset = offset + new_speed
+            
+            # Update animation data
+            animation_data["i"] = i + 1
+            animation_data["offset"] = new_offset
+            animation_data["current_speed"] = new_speed
+            
+            root.after(35, animate_frame)
+        else:
+            # Final position - show awarded badge
+            loot_canvas.delete("all")
+            cx = loot_canvas_w//2
+            cy = loot_canvas_h//2 - 10
+            
+            # Draw the awarded badge large in the center
+            if use_sprite_images and awarded in sprite_imgs:
+                img = sprite_imgs[awarded]
+                loot_canvas.create_image(cx - img.width()//2, cy - img.height()//2, anchor="nw", image=img)
+            else:
+                if awarded == "Circle": 
+                    loot_canvas.create_oval(cx-90,cy-90,cx+90,cy+90, fill="#1e90ff", outline="black", width=3)
+                elif awarded == "Square": 
+                    loot_canvas.create_rectangle(cx-90,cy-90,cx+90,cy+90, fill="#4cd137", outline="black", width=3)
+                elif awarded == "Triangle": 
+                    loot_canvas.create_polygon(cx,cy-100, cx-95,cy+60, cx+95,cy+60, fill="#ff6b6b", outline="black", width=3)
                 elif awarded == "Hexagon":
-                    r=95; pts=[]
+                    r=95
+                    pts=[]
                     for t in range(6):
                         ang = math.radians(60*t - 30)
                         pts.extend([cx + r*math.cos(ang), cy + r*math.sin(ang)])
                     loot_canvas.create_polygon(pts, fill="#f7c948", outline="black", width=3)
-            loot_result.config(text=f"🎉 You obtained: {awarded} badge!")
-            player_badges.append(awarded)
+            
+            # Check if player already has this badge
+            if awarded in player_badges:
+                loot_result.config(text=f"🎉 You obtained: {awarded} badge! (Duplicate)")
+            else:
+                loot_result.config(text=f"🎉 You obtained: {awarded} badge!")
+                player_badges.append(awarded)  # Only add if it's a new badge
+            
             update_badges_display()
-    animate_frame(0,0)
+    
+    # Start animation
+    animate_frame()
 
 buy_btn = tk.Button(shop_frame, text="Open Loot Box", font=("Arial",14,"bold"), bg="#32cd32", fg="white", command=buy_lootbox_and_award)
 buy_btn.pack(pady=6)
@@ -574,7 +749,3 @@ def show_badges():
 # ---------------- Start the app ----------------
 show_home()
 root.mainloop()
-
-
-
-
