@@ -1,5 +1,5 @@
 # 2025-Salt_Jun-Yi_Peter_Joshua
-An app that hopefully works.
+An app that hopefully works.(DISCLAIMER: This program is almost entirely vibe coded. There is heavy AI usage to generate code for this program.)
 Rules for usage:
 1. Please don't break it, we spent a long time on it
 2. If you are feeling generous, you may make a donation to our patreon to continue supporting small developers like us.
