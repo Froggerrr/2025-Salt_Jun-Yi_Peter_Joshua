@@ -263,6 +263,20 @@ def generate_line_inclination_question():
     answer = str(round(o, 2))
     return question, answer
 
+def generate_circle_tangent_question():
+    l = random.randint(1, 30) / 10
+    v = random.randint(-10, 10)
+    n = random.randint(1, 10)
+    x = l * n + v
+    op = x + n / l
+    t = round(op, 2)
+    i = round(((op - x)**2 + n**2)**0.5, 2)
+    
+    question = f"A straight line has the equation y = mx + c where m = {l} and c = {v}. A circle whose center lies on the y-axis is tangent to this line at the x-coordinate {n}. The equation of the circle can be shown as (x-a)² + (y-b)² = r². Find the values of a, b, and r to 2 decimal places. Format your answer as: a,b,r"
+    
+    answer = f"0,{t},{i}"
+    return question, answer
+
 # ---------------- UI: Home Frame ----------------
 home_frame = tk.Frame(root, bg="#f0f8ff")
 
@@ -420,17 +434,19 @@ def start_questions_session():
     elif minutes <= 30: num_questions = 3
     else: num_questions = 4
     
-    # Generate questions - random mix of all three types
+    # Generate questions - random mix of all four types
     questions_for_session = []
     for _ in range(num_questions):
-        # Randomly choose between the three question types
-        question_type = random.choice(["circle_eq", "circle_diameter", "line_inclination"])
+        # Randomly choose between the four question types
+        question_type = random.choice(["circle_eq", "circle_diameter", "line_inclination", "circle_tangent"])
         if question_type == "circle_eq":
             q_text, q_answer = generate_circle_question_and_answer()
         elif question_type == "circle_diameter":
             q_text, q_answer = generate_circle_diameter_question()
-        else:  # line_inclination
+        elif question_type == "line_inclination":
             q_text, q_answer = generate_line_inclination_question()
+        else:  # circle_tangent
+            q_text, q_answer = generate_circle_tangent_question()
         questions_for_session.append({"question": q_text, "answer": q_answer})
     
     current_question_index = 0
@@ -456,7 +472,7 @@ def submit_answer():
     user = answer_entry.get().strip()
     correct = questions_for_session[current_question_index]["answer"]
     
-    # Check if this is a circle center/radius question (format: h,k,r)
+    # Check if this is a circle center/radius question (format: h,k,r) or circle tangent question (format: a,b,r)
     if "," in correct and len(correct.split(",")) == 3:
         # Accept a few formats: 'h,k,r' or 'h k r' or "h, k, r"
         def parse_nums(s):
