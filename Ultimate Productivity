@@ -566,7 +566,7 @@ def buy_lootbox_and_award():
     # Determine the awarded badge first
     awarded = badge_random_choice()
     
-    # Find the FIRST occurrence of the awarded badge in the marquee sequence
+    # Find the position of the awarded badge in the marquee sequence
     target_index = -1
     for i, item in enumerate(marquee_seq):
         if item["name"] == awarded:
@@ -574,23 +574,26 @@ def buy_lootbox_and_award():
             break
     
     if target_index == -1:
-        # Fallback - shouldn't happen with our fixed sequence
         target_index = 0
     
-    # Calculate the target offset to land the awarded badge in the center
+    # Calculate the exact offset needed to center the target badge
     spacing = 160
-    target_offset = target_index * spacing
+    # We want the target badge to be centered in the highlight box
+    # The center of the canvas is at loot_canvas_w//2
+    # Each badge is centered at: -offset + i*spacing + spacing//2
+    # We want: -offset + target_index*spacing + spacing//2 = loot_canvas_w//2
+    # So: offset = target_index*spacing + spacing//2 - loot_canvas_w//2
+    target_offset = target_index * spacing + spacing//2 - loot_canvas_w//2
     
     seq = marquee_seq
-    frames = 100  # More frames for smoother animation
     
-    # Use instance variables to track animation state
-    animation_data = {"i": 0, "offset": 0, "current_speed": 20}
+    # Animation data
+    animation_data = {"offset": 0, "speed": 50, "frame": 0}
     
     def animate_frame():
-        i = animation_data["i"]
+        frame = animation_data["frame"]
         offset = animation_data["offset"]
-        current_speed = animation_data["current_speed"]
+        speed = animation_data["speed"]
         
         loot_canvas.delete("all")
         x = -offset
@@ -633,64 +636,77 @@ def buy_lootbox_and_award():
         # Highlight box in center
         loot_canvas.create_rectangle(loot_canvas_w//2 - 80, 25, loot_canvas_w//2 + 80, loot_canvas_h - 25, outline="#ff8c00", width=3)
         
-        if i < frames:
-            # Calculate distance to target
-            distance_to_target = abs(target_offset - offset)
-            
+        # Check if we should continue animating
+        distance_to_target = abs(target_offset - offset)
+        
+        if distance_to_target > 5 and frame < 60:  # Limit frames to prevent infinite loop
             # Smart deceleration
-            if distance_to_target < spacing * 0.8:
-                # Slow down significantly when close to target
-                new_speed = max(1, current_speed * 0.6)
-            elif distance_to_target < spacing * 2:
-                # Moderate deceleration
-                new_speed = max(2, current_speed * 0.85)
+            if distance_to_target < 100:
+                new_speed = max(2, speed * 0.7)
+            elif distance_to_target < 300:
+                new_speed = max(5, speed * 0.85)
             else:
-                # Gradual deceleration
-                new_speed = max(3, current_speed * 0.95)
+                new_speed = max(8, speed * 0.95)
             
-            # Ensure we land exactly on target
-            if offset + new_speed >= target_offset:
-                new_offset = target_offset
+            # Move towards target
+            if offset < target_offset:
+                new_offset = min(offset + new_speed, target_offset)
             else:
-                new_offset = offset + new_speed
+                new_offset = max(offset - new_speed, target_offset)
             
-            # Update animation data
-            animation_data["i"] = i + 1
             animation_data["offset"] = new_offset
-            animation_data["current_speed"] = new_speed
+            animation_data["speed"] = new_speed
+            animation_data["frame"] = frame + 1
             
-            root.after(35, animate_frame)
+            root.after(20, animate_frame)  # Faster animation (20ms instead of 35ms)
         else:
-            # Final position - show awarded badge
+            # Final position - ensure exact alignment
+            animation_data["offset"] = target_offset
+            
+            # Redraw with final position
             loot_canvas.delete("all")
-            cx = loot_canvas_w//2
-            cy = loot_canvas_h//2 - 10
+            x = -target_offset
             
-            # Draw the awarded badge large in the center
-            if use_sprite_images and awarded in sprite_imgs:
-                img = sprite_imgs[awarded]
-                loot_canvas.create_image(cx - img.width()//2, cy - img.height()//2, anchor="nw", image=img)
-            else:
-                if awarded == "Circle": 
-                    loot_canvas.create_oval(cx-90,cy-90,cx+90,cy+90, fill="#1e90ff", outline="black", width=3)
-                elif awarded == "Square": 
-                    loot_canvas.create_rectangle(cx-90,cy-90,cx+90,cy+90, fill="#4cd137", outline="black", width=3)
-                elif awarded == "Triangle": 
-                    loot_canvas.create_polygon(cx,cy-100, cx-95,cy+60, cx+95,cy+60, fill="#ff6b6b", outline="black", width=3)
-                elif awarded == "Hexagon":
-                    r=95
-                    pts=[]
-                    for t in range(6):
-                        ang = math.radians(60*t - 30)
-                        pts.extend([cx + r*math.cos(ang), cy + r*math.sin(ang)])
-                    loot_canvas.create_polygon(pts, fill="#f7c948", outline="black", width=3)
+            for j, item in enumerate(seq):
+                box_x = x
+                box_y = 40
+                cx = box_x + 80
+                cy = box_y + 60
+                
+                loot_canvas.create_rectangle(box_x+10, box_y+10, box_x+150, box_y+150, fill="#fff", outline="#eee")
+                
+                if use_sprite_images and item["name"] in sprite_imgs:
+                    img = sprite_imgs[item["name"]]
+                    loot_canvas.create_image(box_x+20, box_y+10, anchor="nw", image=img)
+                else:
+                    if item["name"]=="Circle": 
+                        loot_canvas.create_oval(cx-30,cy-30,cx+30,cy+30, fill=item["color"], outline="black")
+                    elif item["name"]=="Square": 
+                        loot_canvas.create_rectangle(cx-30,cy-30,cx+30,cy+30, fill=item["color"], outline="black")
+                    elif item["name"]=="Triangle": 
+                        loot_canvas.create_polygon(cx,cy-32, cx-30,cy+22, cx+30,cy+22, fill=item["color"], outline="black")
+                    elif item["name"]=="Hexagon":
+                        r=28
+                        pts=[]
+                        for t in range(6):
+                            ang = math.radians(60*t - 30)
+                            pts.extend([cx + r*math.cos(ang), cy + r*math.sin(ang)])
+                        loot_canvas.create_polygon(pts, fill=item["color"], outline="black")
+                
+                loot_canvas.create_text(box_x+80, box_y+165, text=item["name"], font=("Arial",10))
+                chance = next((b["chance"] for b in BADGES if b["key"]==item["name"]),0.0)
+                loot_canvas.create_text(box_x+80, box_y+185, text=f"{chance:.1f}%", font=("Arial",9))
+                x += spacing
             
-            # Check if player already has this badge
+            # Highlight the winning badge
+            loot_canvas.create_rectangle(loot_canvas_w//2 - 80, 25, loot_canvas_w//2 + 80, loot_canvas_h - 25, outline="#ff8c00", width=3)
+            
+            # Show result
             if awarded in player_badges:
                 loot_result.config(text=f"🎉 You obtained: {awarded} badge! (Duplicate)")
             else:
                 loot_result.config(text=f"🎉 You obtained: {awarded} badge!")
-                player_badges.append(awarded)  # Only add if it's a new badge
+                player_badges.append(awarded)
             
             update_badges_display()
     
