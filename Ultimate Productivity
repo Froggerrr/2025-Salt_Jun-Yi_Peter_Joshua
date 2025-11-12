@@ -283,7 +283,7 @@ home_frame = tk.Frame(root, bg="#f0f8ff")
 top_bar = tk.Frame(home_frame, bg="#f0f8ff")
 top_bar.pack(fill="x", side="top", pady=6)
 
-streak_label = tk.Label(top_bar, text=f"🔥 Streak: {streak} days", font=("Arial", 12, "bold"), bg="#ffc500", fg="#ff4500")
+streak_label = tk.Label(top_bar, text=f"🔥 Streak: {streak} days", font=("Arial", 12, "bold"), bg="#f0f8ff", fg="#ff4500")
 streak_label.pack(side="left", padx=10)
 
 xp_points_frame = tk.Frame(top_bar, bg="#f0f8ff")
@@ -311,7 +311,7 @@ def animate_emojis():
         y -= 0.8
         if y < -10: y = 130
         emoji_canvas.coords(item, x, y)
-    root.after(10, animate_emojis)
+    root.after(60, animate_emojis)
 
 quote_title = tk.Label(home_frame, text="💡 Motivational Quote of the Day:", font=("Arial", 14, "bold"), bg="#f0f8ff", fg="#ff1493")
 quote_title.pack(pady=(8,0))
@@ -369,8 +369,7 @@ def add_xp(amount):
     while current_xp >= xp_needed:
         current_xp -= xp_needed
         level += 1
-        if (level-1)/5==int(0.2*(level-1)):
-            xp_needed+=200
+        xp_needed += 10
         show_level_up_animation()
     update_home_labels()
     update_xp_bar()
@@ -392,12 +391,12 @@ def update_home_labels():
 update_quote(); animate_emojis(); update_xp_bar()
 
 # ---------------- Stopwatch Frame ----------------
-stopwatch_frame = tk.Frame(root, bg="#ff5000")
-stopwatch_label = tk.Label(stopwatch_frame, text="00:00:00", font=("Arial",30), bg="#ff5000")
+stopwatch_frame = tk.Frame(root, bg="#f0f8ff")
+stopwatch_label = tk.Label(stopwatch_frame, text="00:00:00", font=("Arial",30), bg="#f0f8ff")
 stopwatch_label.pack(pady=20)
-stopwatch_xp_label = tk.Label(stopwatch_frame, text=f"XP Gained: {session_xp}", font=("Arial",16), bg="#ff5000")
+stopwatch_xp_label = tk.Label(stopwatch_frame, text=f"XP Gained: {session_xp}", font=("Arial",16), bg="#f0f8ff")
 stopwatch_xp_label.pack(pady=3)
-stopwatch_points_label = tk.Label(stopwatch_frame, text=f"Points Gained: {session_points}", font=("Arial",16), bg="#ff5000")
+stopwatch_points_label = tk.Label(stopwatch_frame, text=f"Points Gained: {session_points}", font=("Arial",16), bg="#f0f8ff")
 stopwatch_points_label.pack(pady=3)
 
 controls_frame = tk.Frame(stopwatch_frame, bg="#f0f8ff"); controls_frame.pack(pady=16)
@@ -458,30 +457,13 @@ take_test_button = tk.Button(stopwatch_frame, text="Take Test and Claim XP", fon
 take_test_button.pack(pady=14)
 
 # ---------------- Questions UI ----------------
-questions_frame = tk.Frame(root, bg="#88e788")
-question_label = tk.Label(questions_frame, text="", font=("Arial",16), wraplength=720, justify="center", bg="#88e788")
+questions_frame = tk.Frame(root, bg="#f0f8ff")
+question_label = tk.Label(questions_frame, text="", font=("Arial",16), wraplength=720, justify="center", bg="#f0f8ff")
 question_label.pack(pady=20)
 answer_entry = tk.Entry(questions_frame, font=("Arial",14), width=40)
 answer_entry.pack(pady=8)
 feedback_label = tk.Label(questions_frame, text="", font=("Arial",12), bg="#f0f8ff")
 feedback_label.pack(pady=6)
-# emoji canvas
-moji_canvas = tk.Canvas(questions_frame, width=760, height=410, bg="#88E788", highlightthickness=0)
-moji_canvas.pack(pady=6)
-mojis = ["🔥","⭐","💎","⚡","🎯"]
-moji_items=[]
-for _ in range(12):
-    e=random.choice(mojis)
-    x=random.randint(30,730); y=random.randint(-10,400)
-    moji_items.append(moji_canvas.create_text(x,y, text=e, font=("Arial",26)))
-def animate_mojis():
-    for item in moji_items:
-        x,y = moji_canvas.coords(item)
-        y -= 0.8
-        if y < -10: y = 400
-        moji_canvas.coords(item, x, y)
-    root.after(10, animate_mojis)
-animate_mojis()
 
 def submit_answer():
     global current_question_index, xp_multiplier
@@ -520,10 +502,10 @@ def submit_answer():
             ok = user.lower() == correct.lower()
     
     if ok:
-        feedback_label.config(text="✅ Correct! XP multiplier +0.05", font("Arial",24), fg="#154734"
-        xp_multiplier += 0.05
+        feedback_label.config(text="✅ Correct! XP multiplier +0.1", fg="green")
+        xp_multiplier += 0.1
     else:
-        feedback_label.config(text=f"❌ Incorrect. Correct answer: {correct}", font("Arial",12), fg="red")
+        feedback_label.config(text=f"❌ Incorrect. Correct answer: {correct}", fg="red")
     current_question_index += 1
     root.after(900, show_next_question)
 
@@ -566,12 +548,12 @@ def reset_stopwatch_session():
     stopwatch_label.config(text="00:00:00"); stopwatch_xp_label.config(text=f"XP Gained: {int(session_xp)}"); stopwatch_points_label.config(text=f"Points Gained: {int(session_points)}")
 
 # ---------------- Shop Frame ----------------
-shop_frame = tk.Frame(root, bg="#f4cccc")
-shop_title = tk.Label(shop_frame, text="🎁 Loot Box Shop", font=("Arial",24,"bold"), bg="#f4cccc"); shop_title.pack(pady=12)
-cost_label = tk.Label(shop_frame, text="Cost: 20 Points", font=("Arial",14), bg="#f4cccc"); cost_label.pack()
+shop_frame = tk.Frame(root, bg="#f0f8ff")
+shop_title = tk.Label(shop_frame, text="🎁 Loot Box Shop", font=("Arial",24,"bold"), bg="#f0f8ff"); shop_title.pack(pady=12)
+cost_label = tk.Label(shop_frame, text="Cost: 1800 Points", font=("Arial",14), bg="#f0f8ff"); cost_label.pack()
 loot_canvas_w, loot_canvas_h = 760, 220
 loot_canvas = tk.Canvas(shop_frame, width=loot_canvas_w, height=loot_canvas_h, bg="#ffffff", highlightthickness=1); loot_canvas.pack(pady=12)
-loot_result = tk.Label(shop_frame, text="", font=("Arial",14), bg="#f4cccc"); loot_result.pack(pady=6)
+loot_result = tk.Label(shop_frame, text="", font=("Arial",14), bg="#f0f8ff"); loot_result.pack(pady=6)
 
 # Fixed marquee generation - always use the same predictable order
 def make_marquee_items():
@@ -589,7 +571,7 @@ marquee_seq = make_marquee_items()
 
 def buy_lootbox_and_award():
     global total_points
-    cost = 20
+    cost = 1800
     if total_points < cost:
         messagebox.showwarning("Not enough points", "You do not have enough points to open a loot box.")
         return
@@ -753,11 +735,11 @@ back_shop_btn = tk.Button(shop_frame, text="Back to Home", font=("Arial",12), bg
 back_shop_btn.pack(pady=6)
 
 # ---------------- Badges Frame ----------------
-badges_frame = tk.Frame(root, bg="#ffff00")
-badges_title = tk.Label(badges_frame, text="🏅 My Badges", font=("Arial",24,"bold"), bg="#ffff00"); badges_title.pack(pady=10)
-badges_list_frame = tk.Frame(badges_frame, bg="#ffff00"); badges_list_frame.pack(pady=10, fill="both", expand=True)
+badges_frame = tk.Frame(root, bg="#f0f8ff")
+badges_title = tk.Label(badges_frame, text="🏅 My Badges", font=("Arial",24,"bold"), bg="#f0f8ff"); badges_title.pack(pady=10)
+badges_list_frame = tk.Frame(badges_frame, bg="#f0f8ff"); badges_list_frame.pack(pady=10, fill="both", expand=True)
 # Create the single Back to Home button once (prevent duplicates)
-badges_back_btn = tk.Button(badges_frame, text="Back to Home", font=("Arial",12), bg="#ffff00", fg="white", command=lambda: show_home())
+badges_back_btn = tk.Button(badges_frame, text="Back to Home", font=("Arial",12), bg="#ff6347", fg="white", command=lambda: show_home())
 
 def update_badges_display():
     # clear list area but keep the single back button separate
@@ -771,7 +753,7 @@ def update_badges_display():
             r = idx // cols; c = idx % cols
             frame = tk.Frame(badges_list_frame, bg="#ffffff", bd=1, relief="raised", padx=6, pady=6)
             frame.grid(row=r, column=c, padx=8, pady=8)
-            canv = tk.Canvas(frame, width=120, height=120, bg="#888888", highlightthickness=0)
+            canv = tk.Canvas(frame, width=120, height=120, bg="#ffffff", highlightthickness=0)
             canv.pack()
             if use_sprite_images and name in sprite_imgs:
                 canv.create_image(0,0, anchor="nw", image=sprite_imgs[name])
