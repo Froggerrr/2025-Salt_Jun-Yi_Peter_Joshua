@@ -520,7 +520,7 @@ def submit_answer():
             ok = user.lower() == correct.lower()
     
     if ok:
-        feedback_label.config(text="✅ Correct! XP multiplier +0.05", font("Arial",24), fg="#154734")
+        feedback_label.config(text="✅ Correct! XP multiplier +0.05", font("Arial",24), fg="#154734"
         xp_multiplier += 0.05
     else:
         feedback_label.config(text=f"❌ Incorrect. Correct answer: {correct}", font("Arial",12), fg="red")
